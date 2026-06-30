@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saturn — License Console</title>
+<style>
+  :root{
+    --bg: #08070C;
+    --bg-elevated: #100E18;
+    --panel: #15121F;
+    --panel-border: #26213A;
+    --purple: #8B5CF6;
+    --purple-dim: #5B3FA0;
+    --purple-glow: rgba(139,92,246,0.35);
+    --white: #F4F2FA;
+    --gray: #9994AC;
+    --gray-dim: #6B6680;
+    --green: #34D399;
+    --green-dim: rgba(52,211,153,0.12);
+    --red: #F2667A;
+    --red-dim: rgba(242,102,122,0.12);
+    --radius: 10px;
+    font-family: 'Segoe UI', Segoe, system-ui, -apple-system, Roboto, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -10%, var(--purple-glow), transparent 60%),
+      radial-gradient(ellipse 700px 400px at -10% 100%, rgba(139,92,246,0.12), transparent 60%),
+      var(--bg);
+    color: var(--white);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+  ::selection{ background: var(--purple-dim); color: white; }
+
+  /* ---------- Login ---------- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:28px;
+  }
+  .saturn-mark{
+    width:54px; height:54px; position:relative;
+  }
+  .saturn-mark .core{
+    position:absolute; top:50%; left:50%; width:22px; height:22px; border-radius:50%;
+    background: linear-gradient(145deg, #C9B8FF, var(--purple));
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 18px var(--purple-glow);
+  }
+  .saturn-mark .ring{
+    position:absolute; top:50%; left:50%; width:54px; height:18px; border:1.5px solid var(--purple);
+    border-radius:50%; transform: translate(-50%,-50%) rotate(-18deg); opacity:0.85;
+  }
+  .login-card{
+    background: var(--panel); border:1px solid var(--panel-border); border-radius: var(--radius);
+    padding: 36px 38px; width: 360px;
+  }
+  .login-card h1{
+    font-size:20px; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;
+  }
+  .login-card .sub{ color:var(--gray); font-size:12.5px; margin-bottom:26px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:11.5px; color:var(--gray); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.6px; }
+  .field input{
+    width:100%; background:var(--bg-elevated); border:1px solid var(--panel-border); color:var(--white);
+    padding:11px 12px; border-radius:7px; font-size:14px; font-family:inherit; outline:none; transition:border-color .15s;
+  }
+  .field input:focus{ border-color:var(--purple); }
+  .btn{
+    border:none; border-radius:7px; padding:11px 18px; font-family:inherit; font-size:13.5px; font-weight:600;
+    cursor:pointer; transition: transform .1s, opacity .15s; letter-spacing:0.2px;
+  }
+  .btn:active{ transform: scale(0.98); }
+  .btn-primary{ background: linear-gradient(135deg, #A78BFA, var(--purple)); color:#0A0810; width:100%; padding:12px; }
+  .btn-primary:hover{ opacity:0.92; }
+  .error-msg{ color: var(--red); font-size:12.5px; margin-top:12px; min-height:14px; }
+
+  /* ---------- App shell ---------- */
+  #app{ display:none; }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 28px; border-bottom:1px solid var(--panel-border); background: rgba(16,14,24,0.6); backdrop-filter: blur(8px);
+    position:sticky; top:0; z-index:10;
+  }
+  .brand{ display:flex; align-items:center; gap:11px; }
+  .brand .wordmark{ font-size:17px; font-weight:700; letter-spacing:1.5px; }
+  .brand .wordmark span{ color: var(--purple); }
+  .brand .tag{ color:var(--gray-dim); font-size:11px; letter-spacing:0.5px; margin-left:4px; }
+  .topbar-right{ display:flex; align-items:center; gap:14px; }
+  .admin-chip{
+    font-size:12px; color:var(--gray); background:var(--bg-elevated); padding:7px 12px; border-radius:7px; border:1px solid var(--panel-border);
+  }
+  .btn-ghost{
+    background:transparent; border:1px solid var(--panel-border); color:var(--gray); padding:8px 14px; border-radius:7px; font-size:12.5px;
+  }
+  .btn-ghost:hover{ border-color:var(--purple-dim); color:var(--white); }
+
+  .container{ max-width:1180px; margin:0 auto; padding: 28px; }
+
+  .stat-row{ display:grid; grid-template-columns: repeat(4,1fr); gap:14px; margin-bottom:28px; }
+  .stat-card{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius); padding:18px 20px;
+  }
+  .stat-card .label{ color:var(--gray-dim); font-size:11px; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:8px; }
+  .stat-card .value{ font-size:24px; font-weight:700; }
+  .stat-card .value.purple{ color:var(--purple); }
+  .stat-card .value.green{ color:var(--green); }
+
+  .toolbar{ display:flex; gap:12px; margin-bottom:22px; flex-wrap:wrap; align-items:center; }
+  .search-input{
+    flex:1; min-width:220px; background:var(--panel); border:1px solid var(--panel-border); color:var(--white);
+    padding:10px 14px; border-radius:8px; font-family:inherit; font-size:13.5px; outline:none;
+  }
+  .search-input:focus{ border-color:var(--purple); }
+
+  /* ---------- User card ---------- */
+  .user-card{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius); margin-bottom:16px; overflow:hidden;
+  }
+  .user-head{
+    display:flex; align-items:center; justify-content:space-between; padding:18px 22px; cursor:pointer;
+    border-bottom:1px solid transparent;
+  }
+  .user-head:hover{ background: rgba(139,92,246,0.04); }
+  .user-head.open{ border-bottom-color: var(--panel-border); }
+  .user-id{ display:flex; align-items:center; gap:14px; }
+  .avatar{
+    width:38px; height:38px; border-radius:50%; background: linear-gradient(135deg, var(--purple-dim), var(--purple));
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0;
+  }
+  .user-name{ font-size:15px; font-weight:600; }
+  .user-meta{ color:var(--gray-dim); font-size:12px; margin-top:2px; }
+  .user-actions{ display:flex; align-items:center; gap:10px; }
+  .key-count-chip{
+    background:var(--bg-elevated); color:var(--gray); font-size:11.5px; padding:5px 10px; border-radius:20px; border:1px solid var(--panel-border);
+  }
+  .chevron{ color:var(--gray-dim); transition: transform .18s; font-size:11px; }
+  .chevron.open{ transform: rotate(180deg); }
+
+  .user-body{ display:none; padding: 4px 22px 20px; }
+  .user-body.open{ display:block; }
+
+  .key-row{
+    background:var(--bg-elevated); border:1px solid var(--panel-border); border-radius:8px; padding:14px 16px; margin-top:12px;
+  }
+  .key-row-top{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .key-string{
+    font-family: 'Consolas', 'Courier New', monospace; font-size:13px; letter-spacing:0.5px; color:var(--purple);
+    background: rgba(139,92,246,0.08); padding:5px 10px; border-radius:5px; border:1px solid rgba(139,92,246,0.2);
+  }
+  .key-status{ font-size:11px; padding:3px 9px; border-radius:20px; font-weight:600; letter-spacing:0.3px; }
+  .status-active{ background:var(--green-dim); color:var(--green); }
+  .status-expired{ background:var(--red-dim); color:var(--red); }
+  .status-revoked{ background:rgba(160,160,160,0.12); color:var(--gray); }
+  .status-unbound{ background:rgba(139,92,246,0.12); color:var(--purple); }
+
+  .key-detail-grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:10px 18px; margin-top:12px; }
+  .detail-item .k{ color:var(--gray-dim); font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+  .detail-item .v{ font-size:13px; color:var(--white); word-break: break-all; }
+  .detail-item .v.mono{ font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray); }
+
+  .time-actions{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; align-items:center; }
+  .pill-btn{
+    border:none; border-radius:6px; padding:7px 13px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; gap:6px;
+  }
+  .pill-add{ background: var(--green-dim); color: var(--green); }
+  .pill-add:hover{ background: rgba(52,211,153,0.22); }
+  .pill-reduce{ background: var(--red-dim); color: var(--red); }
+  .pill-reduce:hover{ background: rgba(242,102,122,0.22); }
+  .pill-neutral{ background: var(--bg); color:var(--gray); border:1px solid var(--panel-border); }
+  .pill-neutral:hover{ color:var(--white); border-color:var(--purple-dim); }
+  .days-input{
+    width:64px; background:var(--bg); border:1px solid var(--panel-border); color:var(--white); border-radius:6px;
+    padding:6px 8px; font-family:inherit; font-size:12.5px; outline:none; text-align:center;
+  }
+  .days-input:focus{ border-color:var(--purple); }
+
+  .add-user-btn{
+    background: linear-gradient(135deg,#A78BFA,var(--purple)); color:#0A0810; border:none; border-radius:8px;
+    padding:11px 18px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px;
+  }
+  .add-user-btn:hover{ opacity:0.92; }
+  .gen-btn{
+    background: var(--bg-elevated); color:var(--purple); border:1px solid var(--purple-dim); border-radius:8px;
+    padding:10px 16px; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .gen-btn:hover{ background: rgba(139,92,246,0.1); }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--gray-dim); }
+  .empty-state .big{ font-size:15px; color:var(--gray); margin-bottom:6px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(5,4,9,0.7); backdrop-filter: blur(3px);
+    align-items:center; justify-content:center; z-index:100;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; width:420px; max-width:92vw;
+    padding:28px; max-height:88vh; overflow-y:auto;
+  }
+  .modal h2{ font-size:17px; font-weight:700; margin-bottom:18px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:22px; justify-content:flex-end; }
+  .field-row{ display:flex; gap:10px; }
+  .field-row .field{ flex:1; }
+  .select-input{
+    width:100%; background:var(--bg-elevated); border:1px solid var(--panel-border); color:var(--white);
+    padding:11px 12px; border-radius:7px; font-size:13.5px; font-family:inherit; outline:none;
+  }
+  .generated-keys-box{
+    background:var(--bg-elevated); border:1px solid var(--panel-border); border-radius:8px; padding:14px;
+    max-height:200px; overflow-y:auto; margin-top:14px; font-family:'Consolas','Courier New',monospace; font-size:12.5px;
+    color:var(--purple); line-height:2;
+  }
+  .download-btn{
+    margin-top:12px; width:100%; background:var(--bg); border:1px solid var(--purple-dim); color:var(--purple);
+    padding:10px; border-radius:7px; font-weight:600; font-size:12.5px; cursor:pointer;
+  }
+  .download-btn:hover{ background:rgba(139,92,246,0.1); }
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--panel); border:1px solid var(--purple-dim);
+    color:var(--white); padding:13px 18px; border-radius:8px; font-size:13px; z-index:200; opacity:0; transform:translateY(10px);
+    transition: all .25s; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  @media(max-width:720px){
+    .stat-row{ grid-template-columns: repeat(2,1fr); }
+    .container{ padding:18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="saturn-mark"><div class="ring"></div><div class="core"></div></div>
+  <div class="login-card">
+    <h1>SATURN<span style="color:var(--purple)">.</span></h1>
+    <div class="sub">License console — sign in to continue</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="loginUser" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPass" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign in</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="saturn-mark" style="width:30px;height:30px;">
+        <div class="ring" style="width:30px;height:10px;border-width:1.2px;"></div>
+        <div class="core" style="width:12px;height:12px;"></div>
+      </div>
+      <div>
+        <div class="wordmark">SATURN<span>.</span></div>
+      </div>
+      <div class="tag">LICENSE CONSOLE</div>
+    </div>
+    <div class="topbar-right">
+      <div class="admin-chip" id="adminChip">admin</div>
+      <button class="btn-ghost" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stat-row">
+      <div class="stat-card"><div class="label">Total Users</div><div class="value" id="statUsers">0</div></div>
+      <div class="stat-card"><div class="label">Total Keys</div><div class="value purple" id="statKeys">0</div></div>
+      <div class="stat-card"><div class="label">Active Subscriptions</div><div class="value green" id="statActive">0</div></div>
+      <div class="stat-card"><div class="label">Unbound Keys</div><div class="value" id="statUnbound">0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search-input" id="searchBox" placeholder="Search by name, username, or key..." oninput="renderUsers()" />
+      <button class="gen-btn" onclick="openGenModal()">⚡ Generate Keys</button>
+      <button class="add-user-btn" onclick="openUserModal()">+ Add User</button>
+    </div>
+
+    <div id="userList"></div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-overlay" id="userModalOverlay">
+  <div class="modal">
+    <h2>Add User</h2>
+    <div class="field"><label>Display Name</label><input class="field-input" id="newDisplayName" placeholder="e.g. John Carter"/></div>
+    <div class="field"><label>Username</label><input id="newUsername" placeholder="e.g. johnc"/></div>
+    <div class="field"><label>Password</label><input id="newPassword" type="text" placeholder="Set a login password"/></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('userModalOverlay')">Cancel</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="submitNewUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="genModalOverlay">
+  <div class="modal">
+    <h2>Generate Keys</h2>
+    <div class="field-row">
+      <div class="field"><label>Quantity</label><input id="genQty" type="number" min="1" max="500" value="1"/></div>
+      <div class="field">
+        <label>Duration</label>
+        <select class="select-input" id="genDuration">
+          <option value="">Lifetime</option>
+          <option value="1">1 day</option>
+          <option value="7">7 days</option>
+          <option value="30">30 days</option>
+          <option value="90">90 days</option>
+          <option value="365">365 days</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Assign to user (optional)</label>
+      <select class="select-input" id="genUser"><option value="">— Unassigned —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('genModalOverlay')">Cancel</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="submitGenerate()">Generate</button>
+    </div>
+    <div id="genResultBox" style="display:none;">
+      <div class="generated-keys-box" id="genResultKeys"></div>
+      <button class="download-btn" onclick="downloadGenKeys()">⬇ Download as .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = ''; // same origin
+let TOKEN = localStorage.getItem('saturn_token') || '';
+let ADMIN_NAME = localStorage.getItem('saturn_admin') || '';
+let usersData = [];
+let lastGeneratedKeys = [];
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function authHeaders(){
+  return { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + TOKEN };
+}
+
+async function doLogin(){
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  if(!username || !password){ errEl.textContent = 'Enter username and password.'; return; }
+  try{
+    const res = await fetch(API + '/api/admin/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if(!res.ok){ errEl.textContent = data.error || 'Login failed.'; return; }
+    TOKEN = data.token; ADMIN_NAME = data.username;
+    localStorage.setItem('saturn_token', TOKEN);
+    localStorage.setItem('saturn_admin', ADMIN_NAME);
+    enterApp();
+  }catch(e){ errEl.textContent = 'Could not reach server.'; }
+}
+
+function logout(){
+  TOKEN=''; localStorage.removeItem('saturn_token'); localStorage.removeItem('saturn_admin');
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+function enterApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('adminChip').textContent = ADMIN_NAME;
+  loadUsers();
+}
+
+async function loadUsers(){
+  try{
+    const res = await fetch(API + '/api/admin/users', { headers: authHeaders() });
+    if(res.status === 401){ logout(); return; }
+    const data = await res.json();
+    usersData = data.users;
+    renderStats();
+    renderUsers();
+    populateUserSelect();
+  }catch(e){ showToast('Failed to load data'); }
+}
+
+function renderStats(){
+  let totalKeys=0, active=0, unbound=0;
+  usersData.forEach(u=>{
+    u.keys.forEach(k=>{
+      totalKeys++;
+      if(!k.hwid) unbound++;
+      if(!k.revoked && (!k.expiresAt || new Date(k.expiresAt) > new Date())) active++;
+    });
+  });
+  document.getElementById('statUsers').textContent = usersData.length;
+  document.getElementById('statKeys').textContent = totalKeys;
+  document.getElementById('statActive').textContent = active;
+  document.getElementById('statUnbound').textContent = unbound;
+}
+
+function timeLeftLabel(expiresAt){
+  if(!expiresAt) return 'Lifetime';
+  const diff = new Date(expiresAt) - new Date();
+  if(diff <= 0) return 'Expired';
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  if(days > 0) return days + 'd ' + hours + 'h left';
+  const mins = Math.floor((diff % 3600000) / 60000);
+  return hours + 'h ' + mins + 'm left';
+}
+
+function keyStatus(k){
+  if(k.revoked) return {cls:'status-revoked', label:'Revoked'};
+  if(k.expiresAt && new Date(k.expiresAt) < new Date()) return {cls:'status-expired', label:'Expired'};
+  if(!k.hwid) return {cls:'status-unbound', label:'Unbound'};
+  return {cls:'status-active', label:'Active'};
+}
+
+let openUserIds = new Set();
+
+function renderUsers(){
+  const q = document.getElementById('searchBox').value.toLowerCase().trim();
+  const list = document.getElementById('userList');
+  list.innerHTML = '';
+
+  const filtered = usersData.filter(u=>{
+    if(!q) return true;
+    if(u.displayName.toLowerCase().includes(q)) return true;
+    if(u.username.toLowerCase().includes(q)) return true;
+    return u.keys.some(k=>k.keyString.toLowerCase().includes(q));
+  });
+
+  if(filtered.length === 0){
+    list.innerHTML = '<div class="empty-state"><div class="big">No users found</div>Try a different search, or add a new user.</div>';
+    return;
+  }
+
+  filtered.forEach(u=>{
+    const isOpen = openUserIds.has(u.id);
+    const card = document.createElement('div');
+    card.className = 'user-card';
+    const initials = u.displayName.split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase();
+
+    let keysHtml = '';
+    if(u.keys.length === 0){
+      keysHtml = '<div style="color:var(--gray-dim); font-size:12.5px; padding:14px 4px;">No keys issued to this user yet.</div>';
+    } else {
+      u.keys.forEach(k=>{
+        const st = keyStatus(k);
+        keysHtml += `
+          <div class="key-row">
+            <div class="key-row-top">
+              <span class="key-string">${k.keyString}</span>
+              <span class="key-status ${st.cls}">${st.label}</span>
+            </div>
+            <div class="key-detail-grid">
+              <div class="detail-item"><div class="k">HWID</div><div class="v mono">${k.hwid ? k.hwid : 'Not yet bound'}</div></div>
+              <div class="detail-item"><div class="k">Time Left</div><div class="v">${timeLeftLabel(k.expiresAt)}</div></div>
+              <div class="detail-item"><div class="k">Created</div><div class="v">${new Date(k.createdAt).toLocaleDateString()}</div></div>
+              <div class="detail-item"><div class="k">Last Used</div><div class="v">${k.lastValidatedAt ? new Date(k.lastValidatedAt).toLocaleDateString() : 'Never'}</div></div>
+            </div>
+            <div class="time-actions">
+              <button class="pill-btn pill-add" onclick="adjustTime(${k.id}, getDaysInput(${k.id}))">+ Add Time</button>
+              <button class="pill-btn pill-reduce" onclick="adjustTime(${k.id}, -getDaysInput(${k.id}))">− Reduce Time</button>
+              <input type="number" class="days-input" id="days_${k.id}" value="30" min="1"/>
+              <span style="color:var(--gray-dim); font-size:11.5px;">days</span>
+              <button class="pill-btn pill-neutral" onclick="resetHwid(${k.id})">Reset HWID</button>
+              <button class="pill-btn pill-neutral" onclick="toggleRevoke(${k.id}, ${!k.revoked})">${k.revoked ? 'Unrevoke' : 'Revoke'}</button>
+              <button class="pill-btn pill-neutral" onclick="deleteKey(${k.id})">Delete</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    card.innerHTML = `
+      <div class="user-head ${isOpen?'open':''}" onclick="toggleUser(${u.id})">
+        <div class="user-id">
+          <div class="avatar">${initials}</div>
+          <div>
+            <div class="user-name">${u.displayName}</div>
+            <div class="user-meta">@${u.username} · ${u.keys.length} key${u.keys.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="user-actions">
+          <span class="key-count-chip">${u.keys.length} key${u.keys.length!==1?'s':''}</span>
+          <button class="pill-btn pill-neutral" onclick="event.stopPropagation(); editUser(${u.id})">Edit</button>
+          <button class="pill-btn pill-neutral" onclick="event.stopPropagation(); deleteUser(${u.id})">Delete</button>
+          <span class="chevron ${isOpen?'open':''}">▾</span>
+        </div>
+      </div>
+      <div class="user-body ${isOpen?'open':''}">
+        <div class="key-detail-grid" style="margin-bottom:6px;">
+          <div class="detail-item"><div class="k">Login Username</div><div class="v">${u.username}</div></div>
+          <div class="detail-item"><div class="k">Login Password</div><div class="v">•••••••• <a href="#" onclick="event.preventDefault(); revealReset(${u.id})" style="color:var(--purple); font-size:11px;">(reset)</a></div></div>
+        </div>
+        ${keysHtml}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function getDaysInput(keyId){
+  const el = document.getElementById('days_' + keyId);
+  return parseFloat(el.value) || 0;
+}
+
+function toggleUser(id){
+  if(openUserIds.has(id)) openUserIds.delete(id); else openUserIds.add(id);
+  renderUsers();
+}
+
+async function adjustTime(keyId, days){
+  if(!days){ showToast('Enter a day amount first'); return; }
+  const res = await fetch(API + `/api/admin/keys/${keyId}/time`, {
+    method:'POST', headers: authHeaders(), body: JSON.stringify({days})
+  });
+  if(res.ok){ showToast(days > 0 ? `Added ${days} day(s)` : `Reduced ${Math.abs(days)} day(s)`); loadUsers(); }
+  else showToast('Failed to update time');
+}
+
+async function resetHwid(keyId){
+  if(!confirm('Unlock this key from its current device? It will bind to the next machine that activates it.')) return;
+  const res = await fetch(API + `/api/admin/keys/${keyId}/reset-hwid`, { method:'POST', headers: authHeaders() });
+  if(res.ok){ showToast('HWID unlocked'); loadUsers(); } else showToast('Failed');
+}
+
+async function toggleRevoke(keyId, revoked){
+  const res = await fetch(API + `/api/admin/keys/${keyId}/revoke`, {
+    method:'POST', headers: authHeaders(), body: JSON.stringify({revoked})
+  });
+  if(res.ok){ showToast(revoked ? 'Key revoked' : 'Key restored'); loadUsers(); } else showToast('Failed');
+}
+
+async function deleteKey(keyId){
+  if(!confirm('Permanently delete this key?')) return;
+  const res = await fetch(API + `/api/admin/keys/${keyId}`, { method:'DELETE', headers: authHeaders() });
+  if(res.ok){ showToast('Key deleted'); loadUsers(); }
+}
+
+async function deleteUser(userId){
+  if(!confirm('Delete this user? Their keys will become unassigned.')) return;
+  const res = await fetch(API + `/api/admin/users/${userId}`, { method:'DELETE', headers: authHeaders() });
+  if(res.ok){ showToast('User deleted'); loadUsers(); }
+}
+
+async function revealReset(userId){
+  const newPass = prompt('Enter a new password for this user:');
+  if(!newPass) return;
+  const res = await fetch(API + `/api/admin/users/${userId}`, {
+    method:'PUT', headers: authHeaders(), body: JSON.stringify({password:newPass})
+  });
+  if(res.ok) showToast('Password updated'); else showToast('Failed');
+}
+
+function editUser(userId){
+  const u = usersData.find(x=>x.id===userId);
+  const name = prompt('Display name:', u.displayName);
+  if(name === null) return;
+  fetch(API + `/api/admin/users/${userId}`, {
+    method:'PUT', headers: authHeaders(), body: JSON.stringify({displayName:name})
+  }).then(r=>{ if(r.ok){ showToast('User updated'); loadUsers(); } });
+}
+
+// ---------- Modals ----------
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function openUserModal(){
+  document.getElementById('newDisplayName').value='';
+  document.getElementById('newUsername').value='';
+  document.getElementById('newPassword').value='';
+  openModal('userModalOverlay');
+}
+
+async function submitNewUser(){
+  const displayName = document.getElementById('newDisplayName').value.trim();
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value;
+  if(!displayName || !username || !password){ showToast('Fill in all fields'); return; }
+  const res = await fetch(API + '/api/admin/users', {
+    method:'POST', headers: authHeaders(), body: JSON.stringify({displayName, username, password})
+  });
+  const data = await res.json();
+  if(res.ok){ showToast('User created'); closeModal('userModalOverlay'); loadUsers(); }
+  else showToast(data.error || 'Failed to create user');
+}
+
+function populateUserSelect(){
+  const sel = document.getElementById('genUser');
+  sel.innerHTML = '<option value="">— Unassigned —</option>';
+  usersData.forEach(u=>{
+    const opt = document.createElement('option');
+    opt.value = u.id; opt.textContent = u.displayName + ' (@' + u.username + ')';
+    sel.appendChild(opt);
+  });
+}
+
+function openGenModal(){
+  document.getElementById('genResultBox').style.display='none';
+  document.getElementById('genQty').value = 1;
+  openModal('genModalOverlay');
+}
+
+async function submitGenerate(){
+  const quantity = parseInt(document.getElementById('genQty').value, 10);
+  const durationVal = document.getElementById('genDuration').value;
+  const userId = document.getElementById('genUser').value || null;
+  const durationDays = durationVal ? parseInt(durationVal,10) : null;
+
+  const res = await fetch(API + '/api/admin/keys/generate', {
+    method:'POST', headers: authHeaders(),
+    body: JSON.stringify({ quantity, userId, durationDays })
+  });
+  const data = await res.json();
+  if(!res.ok){ showToast(data.error || 'Generation failed'); return; }
+
+  lastGeneratedKeys = data.keys.map(k=>k.key_string);
+  document.getElementById('genResultKeys').innerHTML = lastGeneratedKeys.join('<br>');
+  document.getElementById('genResultBox').style.display = 'block';
+  showToast(`Generated ${lastGeneratedKeys.length} key(s)`);
+  loadUsers();
+}
+
+function downloadGenKeys(){
+  const blob = new Blob([lastGeneratedKeys.join('\\n')], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'saturn_keys_' + Date.now() + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- Boot ----------
+if(TOKEN){ enterApp(); }
+document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>
